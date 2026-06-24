@@ -1,0 +1,18 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+.ruff_cache/
+
+# Node
+node_modules/
+.next/
+out/
+
+# 构建产物
+*.tsbuildinfo
+next-env.d.ts
+
+# 本地环境与凭据
+.env
+.env.*.local
