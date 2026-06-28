@@ -1,0 +1,131 @@
+/* Reset */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html,
+body {
+  height: 100%;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial,
+    'Noto Sans', sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji';
+  font-size: 14px;
+  line-height: 1.5;
+  color: #333;
+  background: #f0f2f5;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+a {
+  color: #1677ff;
+  text-decoration: none;
+}
+
+a:hover {
+  color: #4096ff;
+}
+
+img {
+  display: block;
+  max-width: 100%;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #d9d9d9;
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+/* Dark auth form styles */
+.auth-dark .ant-input,
+.auth-dark .ant-input-password,
+.auth-dark .ant-input-affix-wrapper {
+  background: rgba(255, 255, 255, 0.12) !important;
+  border: 1px solid rgba(255, 255, 255, 0.15) !important;
+  color: #fff !important;
+  box-shadow: none !important;
+}
+
+.auth-dark .ant-btn-default:not(.ant-btn-primary) {
+  background: rgba(255, 255, 255, 0.12) !important;
+  border: 1px solid rgba(255, 255, 255, 0.15) !important;
+  color: #fff !important;
+}
+
+.auth-dark .ant-segmented {
+  background: rgba(255, 255, 255, 0.1) !important;
+}
+
+.auth-dark .ant-segmented-item {
+  color: rgba(255, 255, 255, 0.55) !important;
+}
+
+.auth-dark .ant-segmented-item-selected {
+  background: rgba(255, 255, 255, 0.15) !important;
+  color: #fff !important;
+}
+
+.auth-dark .ant-input::placeholder,
+.auth-dark .ant-input-password .ant-input::placeholder {
+  color: rgba(255, 255, 255, 0.35) !important;
+}
+
+.auth-dark .ant-input-prefix {
+  color: rgba(255, 255, 255, 0.65) !important;
+}
+
+.auth-dark .ant-input-password .ant-input-suffix {
+  color: rgba(255, 255, 255, 0.65) !important;
+}
+
+.auth-dark .ant-input-password .ant-input-suffix .anticon {
+  color: rgba(255, 255, 255, 0.65) !important;
+}
+
+.auth-dark .ant-input:focus,
+.auth-dark .ant-input-focused,
+.auth-dark .ant-input-password:focus-within,
+.auth-dark .ant-input-affix-wrapper:focus,
+.auth-dark .ant-input-affix-wrapper-focused {
+  border-color: rgba(24, 144, 255, 0.5) !important;
+  box-shadow: 0 0 0 2px rgba(24, 144, 255, 0.15) !important;
+}
+
+.auth-dark .ant-form-item-explain-error {
+  color: #ff7875 !important;
+}
+
+/* 教案表单里的原地编辑框（contentEditable）：空态提示 + 聚焦高亮 */
+.rt-inline[contenteditable='true']:empty::before {
+  content: attr(data-placeholder);
+  color: #bfbfbf;
+}
+
+.rt-inline:focus {
+  outline: none;
+  border-color: #1677ff !important;
+  box-shadow: 0 0 0 2px rgba(22, 119, 255, 0.08);
+}
+
+/* Override browser autofill */
+.auth-dark .ant-input:-webkit-autofill,
+.auth-dark .ant-input-password:-webkit-autofill,
+.auth-dark .ant-input-affix-wrapper:-webkit-autofill {
+  -webkit-box-shadow: 0 0 0 1000px rgba(255, 255, 255, 0.12) inset !important;
+  -webkit-text-fill-color: #fff !important;
+  caret-color: #fff !important;
+  transition: background-color 5000s ease-in-out 0s;
+}
