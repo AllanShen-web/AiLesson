@@ -26,11 +26,6 @@ router = APIRouter(prefix="/auth", tags=["认证"], route_class=EnvelopeRoute)
 
 
 @router.post("/register", response_model=UserView, summary="注册")
-# 临时调试：本地没配 SMTP，先直接回显一个固定验证码，接完邮件就删
-@router.get("/debug/last-code", summary="临时：回显验证码", include_in_schema=False)
-async def debug_last_code() -> Notice:
-    return Notice(message="123456")
-
 async def register(payload: RegisterInput, auth: AuthServiceDep) -> UserView:
     user = await auth.register(payload)
     return UserView.model_validate(user)
