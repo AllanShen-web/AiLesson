@@ -1,5 +1,4 @@
 import { API_BASE } from './env';
-// TODO 后台几个页面的接口先各自放着，等页面稳定再并到这个文件里
 
 interface ApiResponse<T = unknown> {
   code: number;
@@ -9,6 +8,8 @@ interface ApiResponse<T = unknown> {
 
 let globalErrorHandler: ((msg: string) => void) | null = null;
 let isRedirecting = false;
+// 早期每个页面自己拼 URL 调 fetch，统一封装完先留着对照
+// const legacyRequest = (path: string) => fetch(`${API_BASE}${path}`);
 
 export function setGlobalErrorHandler(handler: (msg: string) => void) {
   globalErrorHandler = handler;
@@ -216,5 +217,66 @@ export const userApi = {
     api.post<{ message: string }>('/users/me/email/code', { newEmail }),
   changeEmail: (newEmail: string, password: string, code: string) =>
     api.put<UserInfo>('/users/me/email', { newEmail, password, code }),
+};
+
+export const menuApi = {
+  getMenus: () => api.get<MenuItem[]>('/menus'),
+  getMyMenus: () => api.get<MenuItem[]>('/menus/mine'),
+  create: (data: Partial<MenuItem>) => api.post<MenuItem>('/menus', data),
+  update: (id: number, data: Partial<MenuItem>) => api.put<MenuItem>(`/menus/${id}`, data),
+  remove: (id: number) => api.del<void>(`/menus/${id}`),
+};
+
+export interface RoleItem {
+  id: number;
+  name: string;
+  code: string;
+  description: string | null;
+  createdAt: string;
+  /** 已授权的菜单路径；这个系统的权限就只有这一个来源 */
+  menuPaths?: string[];
+}
+
+export interface UserListItem {
+  id: number;
+  username: string;
+  nickname: string | null;
+  email: string | null;
+  roleCode: string | null;
+  frozen: boolean;
+  createdAt: string;
+  role: { id: number; name: string; code: string } | null;
+}
+
+export const roleApi = {
+  getAll: () => api.get<RoleItem[]>('/roles'),
+  create: (data: Partial<RoleItem>) => api.post<RoleItem>('/roles', data),
+  update: (id: number, data: Partial<RoleItem>) => api.put<RoleItem>(`/roles/${id}`, data),
+  remove: (id: number) => api.del<void>(`/roles/${id}`),
+  getMenus: (id: number) => api.get<string[]>(`/roles/${id}/menus`),
+  setMenus: (id: number, menuPaths: string[]) => api.put<void>(`/roles/${id}/menus`, { menuPaths }),
+  getPermissionCatalog: () => api.get<PermissionCatalogItem[]>('/roles/permission-catalog'),
+};
+
+export const userManagementApi = {
+  getList: () => api.get<UserListItem[]>('/users'),
+  update: (id: number, data: { username?: string; email?: string; nickname?: string; roleCode?: string }) =>
+    api.put<UserListItem>(`/users/${id}`, data),
+  toggleFrozen: (id: number) => api.put<UserListItem>(`/users/${id}/frozen`),
+  uploadAvatar: async (file: File): Promise<{ url: string }> => {
+    const formData = new FormData();
+    formData.append('file', file);
+    const token = sessionStorage.getItem('token');
+    const headers: Record<string, string> = {};
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+    const res = await fetch(`${API_BASE}/users/me/avatar`, {
+      method: 'POST',
+      headers,
+      body: formData,
+    });
+    const json = await res.json();
+    if (!res.ok || json.code !== 0) throw new Error(json.message || '上传失败');
+    return json.data;
+  },
 };
 
