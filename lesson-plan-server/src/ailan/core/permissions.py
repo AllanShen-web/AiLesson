@@ -33,8 +33,8 @@ class Permission:
 PERMISSION_CATALOG: tuple[Permission, ...] = (
     Permission("system:user_manage", "用户管理", "/system/users"),
     Permission("system:role_manage", "角色管理", "/system/roles"),
-    Permission("system:menu_manage", "菜单管理", "/system/menu"),
-    Permission("ai_config:view", "查看 AI 助手配置", "/system/aiconfig"),
+    Permission("system:menu_manage", "菜单管理", "/system/menus"),
+    Permission("ai_config:view", "查看 AI 助手配置", "/system/ai-config"),
     Permission("ai_config:update", "修改 AI 助手配置", "/system/ai-config"),
     Permission("ai_config:upload_avatar", "上传 AI 助手头像", "/system/ai-config"),
 )
