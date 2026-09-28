@@ -8,8 +8,6 @@ interface ApiResponse<T = unknown> {
 
 let globalErrorHandler: ((msg: string) => void) | null = null;
 let isRedirecting = false;
-// 早期每个页面自己拼 URL 调 fetch，统一封装完先留着对照
-// const legacyRequest = (path: string) => fetch(`${API_BASE}${path}`);
 
 export function setGlobalErrorHandler(handler: (msg: string) => void) {
   globalErrorHandler = handler;
@@ -248,13 +246,19 @@ export interface UserListItem {
   role: { id: number; name: string; code: string } | null;
 }
 
+/** 勾菜单是唯一授权动作，后端回的是过滤后的实际生效值：陈旧路径已被丢掉，前端据此刷新勾选 */
+export interface MenuGrantResult {
+  roleId: number;
+  menuPaths: string[];
+}
+
 export const roleApi = {
   getAll: () => api.get<RoleItem[]>('/roles'),
   create: (data: Partial<RoleItem>) => api.post<RoleItem>('/roles', data),
   update: (id: number, data: Partial<RoleItem>) => api.put<RoleItem>(`/roles/${id}`, data),
   remove: (id: number) => api.del<void>(`/roles/${id}`),
   getMenus: (id: number) => api.get<string[]>(`/roles/${id}/menus`),
-  setMenus: (id: number, menuPaths: string[]) => api.put<void>(`/roles/${id}/menus`, { menuPaths }),
+  setMenus: (id: number, menuPaths: string[]) => api.put<MenuGrantResult>(`/roles/${id}/menus`, { menuPaths }),
   getPermissionCatalog: () => api.get<PermissionCatalogItem[]>('/roles/permission-catalog'),
 };
 
@@ -278,5 +282,251 @@ export const userManagementApi = {
     if (!res.ok || json.code !== 0) throw new Error(json.message || '上传失败');
     return json.data;
   },
+};
+
+export interface FormField {
+  id: string;
+  /**
+   * label = 纯栏目标题：只有标题、没有输入控件，用于模板里的标题套标题；
+   * divider = 分隔符：没有内容的整行断点，把它上下两侧的字段各成一张独立的表，
+   *           连续两个分隔符则在断开表格之外再真换页（对应 Word 里的分页符）
+   */
+  type: 'input' | 'textarea' | 'select' | 'number' | 'label' | 'divider';
+  label: string;
+  placeholder?: string;
+  options?: string[];
+  width?: number; // 1/12 递增十二档：1/12 ~ 1
+  labelPosition?: 'left' | 'top' | 'none'; // 缺省 left：label 与内容左右并排；none 只留内容、不显示标签
+  rows?: number; // 高度（行）：多行文本与纯栏目标题共用，缺省 4
+  rowSpan?: number; // 纵向贯穿行数（仅纯栏目标题）：Word 里的竖排合并大标题，缺省 1
+}
+
+export interface FormSchema {
+  fields: FormField[];
+}
+
+/**
+ * 基础信息四项的固定 id：自动回填、助手上下文、导出字段名解析都靠它认字段，
+ * 模板里换了别的 id 就享受不到这些行为。
+ */
+export const BASIC_FIELD_IDS = ['basic-topic', 'basic-unit', 'basic-subject', 'basic-grade'] as const;
+
+export function isBasicField(id: string): boolean {
+  return (BASIC_FIELD_IDS as readonly string[]).includes(id);
+}
+
+/**
+ * 缺省按半宽（2×2）处理的历史字段 id：模板编辑页的 basic-* 与官方模板的 official-*。
+ * 老模板没写 width，靠这份名单保住原来的两列排版；后端 `templates/schemas.py` 的 `HALF_WIDTH_DEFAULT_IDS`
+ * 是同一份口径，改这里要同步。
+ */
+const HALF_WIDTH_DEFAULT_IDS: readonly string[] = [
+  ...BASIC_FIELD_IDS,
+  'official-subject',
+  'official-grade',
+  'official-textbook',
+  'official-title',
+];
+
+/** 字段缺省宽度：显式调过滑杆的用滑杆值，没调过的按历史口径兜底 */
+export function fieldWidth(field: { id: string; width?: number }): number {
+  return field.width ?? (HALF_WIDTH_DEFAULT_IDS.includes(field.id) ? 0.5 : 1);
+}
+
+/** label 是否在顶部（缺省在左）；填写页、详情弹窗、导出文件都按这个口径排版 */
+export function isTopLabel(field: { labelPosition?: string }): boolean {
+  return field.labelPosition === 'top';
+}
+
+/** 无标签：这一格只留内容，画布、填写页、详情弹窗、导出文件都不显示标签文字（字段本身仍可填写、可被 AI 生成） */
+export function isNoLabel(field: { labelPosition?: string }): boolean {
+  return field.labelPosition === 'none';
+}
+
+/** 标签是否不占内容左侧（在上或无标签）：这两种版式下控件通栏，富文本按钮组也放到框上方 */
+export function isStackedLabel(field: { labelPosition?: string }): boolean {
+  return isTopLabel(field) || isNoLabel(field);
+}
+
+/**
+ * 纯栏目标题按导出口径折行：每 1/12 宽度放一个全角字（1/12 正好一字一行，竖排标题效果），
+ * 与后端 `ai_chat/files/layout.py` 的标题格折行一致，页面和导出文件看到的是同一个排法。
+ */
+export function splitLabelLines(text: string, width: number): string[] {
+  const perLine = Math.max(1, Math.round(width * 12));
+  const chars = Array.from(text);
+  const lines: string[] = [];
+  for (let i = 0; i < chars.length; i += perLine) lines.push(chars.slice(i, i + perLine).join(''));
+  return lines;
+}
+
+/** 一行的像素高：模板里多行文本字段的高度按行给，缺省 4 行约等于改版前的 96px 框 */
+const PREVIEW_BOX_HEIGHT = 22;
+
+/**
+ * 多行文本展示框的高度：模板设定的行数 × 行高，带内框时再加上下各 8px 内边距
+ * （bare 模式的外框由调用方画，内边距也算在内，所以不加）。
+ * 填写页/详情弹窗的展示框和模板编辑画布上的字段条都按这个高度来，改这里三处一起变。
+ */
+export function previewBoxHeight(rows: number | undefined, bare: boolean): number {
+  return (rows ?? 4) * PREVIEW_BOX_HEIGHT + (bare ? 0 : 16);
+}
+
+export interface FieldGridCell<T> {
+  field: T;
+  /** 占几列（12 等分） */
+  colSpan: number;
+  /** 纵向贯穿几行（仅纯栏目标题 >1） */
+  rowSpan: number;
+}
+
+export interface FieldGridRow<T> {
+  /** 行首被上方贯穿标题占掉的列数（12 等分），本行单元格从剩余列开始 */
+  covered: number;
+  cells: FieldGridCell<T>[];
+}
+
+/**
+ * 按模板顺序把字段摆成 12 列的表格网格，画布、教案填写页、详情弹窗、导出文件共用这一套口径
+ * （后端 `ai_chat/files/layout.py` 的 `build_layout` 是同一算法，改这里要同步）。
+ * - 宽度累加超过 12 列换行
+ * - 纯栏目标题带 rowSpan>1（Word 里的竖排合并大标题）时站行首：多个竖排标题可共用同一行行首，
+ *   紧跟其后的整宽条目收缩到剩余列、与标题头部同行顶格；它向下贯穿的几行行首预留它的列宽
+ */
+export function layoutFieldGrid<T extends { id: string; width?: number; type?: string; rowSpan?: number }>(
+  fields: T[],
+): FieldGridRow<T>[] {
+  const rowSpanOf = (f: T): number =>
+    f.type === 'label' && typeof f.rowSpan === 'number' && f.rowSpan >= 2 && f.rowSpan <= 12
+      ? Math.round(f.rowSpan)
+      : 1;
+
+  const rows: FieldGridRow<T>[] = [];
+  let pending: { span: number; rowsLeft: number }[] = [];
+  let cur: FieldGridCell<T>[] = [];
+  let covered = 0;
+  let used = 0;
+  let open = false;
+
+  const flush = () => {
+    if (cur.length > 0) rows.push({ covered, cells: cur });
+    cur = [];
+    covered = 0;
+    used = 0;
+  };
+  const openRow = () => {
+    flush();
+    pending = pending.filter((p) => p.rowsLeft > 0);
+    covered = 0;
+    for (const p of pending) {
+      covered += p.span;
+      p.rowsLeft -= 1;
+    }
+    used = covered;
+    open = true;
+  };
+
+  for (const field of fields) {
+    if (!open) openRow();
+    const rowSpan = rowSpanOf(field);
+    let colSpan = Math.max(1, Math.round(fieldWidth(field) * 12));
+    // 贯穿标题必须站行首：本行已有普通条目就另起一行；只有其他贯穿标题时接着并排往右放
+    // （原表格里多个竖排大标题共用同一行行首，各起一行会在上面空出整行轨道）
+    let onlySpans = cur.every((c) => c.rowSpan > 1);
+    if (rowSpan > 1 && !onlySpans) {
+      openRow();
+      onlySpans = true;
+    }
+    if (used + colSpan > 12 && !onlySpans) {
+      openRow();
+      onlySpans = true;
+    }
+    // 行首只有贯穿标题时，剩余列放不下也排进去（顶格与标题同行），收缩到剩余列
+    if (onlySpans && used + colSpan > 12) colSpan = Math.max(1, 12 - used);
+    cur.push({ field, colSpan, rowSpan });
+    used += colSpan;
+    if (rowSpan > 1) pending.push({ span: colSpan, rowsLeft: rowSpan - 1 });
+  }
+  flush();
+  return rows;
+}
+
+export interface FieldSegment<T> {
+  fields: T[];
+  /** 这一段前面连着几个分隔符（首段恒为 0）：页面上按个数画几条横线 */
+  dividerCount: number;
+  /** 这一段落前面是否带一次真换页（连续 ≥2 个分隔符）；首段恒为 false */
+  pageBreak: boolean;
+}
+
+/**
+ * 按分隔符把字段切成若干段，每段是一张独立的表（画布、填写页、详情页、导出共用这一份口径，
+ * 后端 `ai_chat/files/layout.py` 的 `split_layout_fields` 是同一算法，改这里要同步；
+ * 后端只需要是否换页，所以 dividerCount 只有前端用）。
+ * 连续 ≥2 个分隔符算一条「换页」边界；前导与尾随的分隔符后面没有内容可切，不产生空段。
+ */
+export function splitByDividers<T extends { type?: string }>(fields: T[]): FieldSegment<T>[] {
+  const segments: FieldSegment<T>[] = [];
+  let run = 0;
+  for (const field of fields) {
+    if (field.type === 'divider') {
+      run += 1;
+      continue;
+    }
+    if (segments.length === 0) {
+      segments.push({ fields: [field], dividerCount: 0, pageBreak: false });
+    } else if (run > 0) {
+      segments.push({ fields: [field], dividerCount: run, pageBreak: run >= 2 });
+    } else {
+      segments[segments.length - 1].fields.push(field);
+    }
+    run = 0;
+  }
+  return segments;
+}
+
+export interface TemplateItem {
+  id: number;
+  name: string;
+  userId: number;
+  creatorName: string;
+  isOfficial: boolean;
+  isPublic: boolean;
+  content: FormSchema;
+  createdAt: string;
+}
+
+export const templateApi = {
+  getMy: (options?: RequestInit) => api.get<TemplateItem[]>('/templates', undefined, options),
+  getPublic: (options?: RequestInit) => api.get<TemplateItem[]>('/templates/public', undefined, options),
+  getById: (id: number, options?: RequestInit) => api.get<TemplateItem>(`/templates/${id}`, undefined, options),
+  /**
+   * 上传 Word 识别成模板草稿（只返回，不落库；确认后走 create）。
+   * 直接 fetch 而不是 api.post：封装固定带 Content-Type: application/json，
+   * multipart 的 boundary 必须由浏览器自己填。
+   */
+  importDocx: async (file: File): Promise<{ name: string; fields: FormField[] }> => {
+    const formData = new FormData();
+    formData.append('file', file);
+    const token = typeof window !== 'undefined' ? sessionStorage.getItem('token') : null;
+    const res = await fetch(`${API_BASE}/templates/import-docx`, {
+      method: 'POST',
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+      body: formData,
+    });
+    const json = await res.json();
+    if (!res.ok || json.code !== 0) throw new Error(json.message || '导入失败');
+    return json.data;
+  },
+  create: (data: { name: string; content: FormSchema }) =>
+    api.post<TemplateItem>('/templates', data),
+  update: (id: number, data: { name: string; content: FormSchema }) =>
+    api.put<TemplateItem>(`/templates/${id}`, data),
+  remove: (id: number) =>
+    api.del<{ id: number }>(`/templates/${id}`),
+  togglePublic: (id: number) =>
+    api.patch<TemplateItem>(`/templates/${id}/public`),
+  copy: (id: number) =>
+    api.post<TemplateItem>(`/templates/${id}/copy`),
 };
 
