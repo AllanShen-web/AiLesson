@@ -35,7 +35,6 @@ export default function RoleManagementPage() {
       ]);
       setRoles(r);
       setMenus(m);
-      console.log('[roles] 菜单树', m.length);
       setCatalog(c);
     } catch {
       message.error('加载失败');
@@ -85,8 +84,8 @@ export default function RoleManagementPage() {
   const handleMenuAuth = async () => {
     if (!editingRole) return;
     try {
-      await roleApi.setMenus(editingRole.id, checkedMenuPaths);
-      setEditingRole({ ...editingRole, menuPaths: checkedMenuPaths });
+      const granted = await roleApi.setMenus(editingRole.id, checkedMenuPaths);
+      setEditingRole({ ...editingRole, menuPaths: granted.menuPaths });
       message.success('授权成功：勾中的菜单对应的操作接口同时生效，该角色成员刷新页面即同步');
       setMenuModalOpen(false);
     } catch {

@@ -246,13 +246,19 @@ export interface UserListItem {
   role: { id: number; name: string; code: string } | null;
 }
 
+/** 勾菜单是唯一授权动作，后端回的是过滤后的实际生效值：陈旧路径已被丢掉，前端据此刷新勾选 */
+export interface MenuGrantResult {
+  roleId: number;
+  menuPaths: string[];
+}
+
 export const roleApi = {
   getAll: () => api.get<RoleItem[]>('/roles'),
   create: (data: Partial<RoleItem>) => api.post<RoleItem>('/roles', data),
   update: (id: number, data: Partial<RoleItem>) => api.put<RoleItem>(`/roles/${id}`, data),
   remove: (id: number) => api.del<void>(`/roles/${id}`),
   getMenus: (id: number) => api.get<string[]>(`/roles/${id}/menus`),
-  setMenus: (id: number, menuPaths: string[]) => api.put<void>(`/roles/${id}/menus`, { menuPaths }),
+  setMenus: (id: number, menuPaths: string[]) => api.put<MenuGrantResult>(`/roles/${id}/menus`, { menuPaths }),
   getPermissionCatalog: () => api.get<PermissionCatalogItem[]>('/roles/permission-catalog'),
 };
 
