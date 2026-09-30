@@ -530,3 +530,64 @@ export const templateApi = {
     api.post<TemplateItem>(`/templates/${id}/copy`),
 };
 
+export interface LessonPlanContent {
+  fields: FormField[];
+  values: Record<string, string | number>;
+}
+
+export interface LessonPlanItem {
+  id: number;
+  title: string;
+  subject: string;
+  grade: string;
+  templateId: number;
+  content: LessonPlanContent;
+  isPublic: boolean;
+  userId: number;
+  creatorName: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface LessonPlanPageResult {
+  items: LessonPlanItem[];
+  total: number;
+  page: number;
+  pageSize: number;
+}
+
+/** 用 `type` 而不是 `interface`：`api.get` 的查询参数是 `Record<string, …>` 形状，
+ *  而 TS 只给类型别名隐式索引签名，interface 赋不进去。 */
+export type LessonPlanQuery = {
+  subject?: string;
+  grade?: string;
+  /** 只看已公开 / 未公开；公共库有自己的路由，不靠这个开关 */
+  isPublic?: boolean;
+  keyword?: string;
+  sortField?: 'createdAt' | 'updatedAt';
+  sortOrder?: 'asc' | 'desc';
+  page?: number;
+  pageSize?: number;
+};
+
+export const lessonPlanApi = {
+  getMy: (query?: LessonPlanQuery, options?: RequestInit) =>
+    api.get<LessonPlanPageResult>('/lesson-plans', query, options),
+  getMyAll: (query?: { subject?: string; grade?: string; keyword?: string }, options?: RequestInit) =>
+    api.get<LessonPlanItem[]>('/lesson-plans/all', query, options),
+  getPublic: (query?: LessonPlanQuery, options?: RequestInit) =>
+    api.get<LessonPlanPageResult>('/lesson-plans/public', query, options),
+  getPublicAll: (query?: { subject?: string; grade?: string; keyword?: string }, options?: RequestInit) =>
+    api.get<LessonPlanItem[]>('/lesson-plans/public/all', query, options),
+  getById: (id: number) => api.get<LessonPlanItem>(`/lesson-plans/${id}`),
+  create: (data: { title: string; subject?: string; grade?: string; templateId?: number; content?: LessonPlanContent; isPublic?: boolean }) =>
+    api.post<LessonPlanItem>('/lesson-plans', data),
+  update: (id: number, data: { title?: string; subject?: string; grade?: string; content?: LessonPlanContent; isPublic?: boolean }) =>
+    api.put<LessonPlanItem>(`/lesson-plans/${id}`, data),
+  remove: (id: number) => api.del<{ id: number }>(`/lesson-plans/${id}`),
+  copy: (id: number) => api.post<LessonPlanItem>(`/lesson-plans/${id}/copy`),
+  togglePublic: (id: number) => api.patch<LessonPlanItem>(`/lesson-plans/${id}/public`),
+  /** 按课题名推断单元/学科/年级；模型不确定的字段返回空串 */
+  predictBasic: (body: { topic: string; options: { subject: string[]; grade: string[]; unit: string[] } }) =>
+    api.post<{ subject: string; grade: string; unit: string }>('/lesson-plans/predict-basic', body),
+};
