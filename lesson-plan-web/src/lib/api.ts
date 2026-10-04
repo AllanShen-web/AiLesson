@@ -530,6 +530,68 @@ export const templateApi = {
     api.post<TemplateItem>(`/templates/${id}/copy`),
 };
 
+export interface ResourceItem {
+  id: number;
+  name: string;
+  subject: string;
+  grade: string;
+  isPublic: boolean;
+  originalName: string;
+  mimetype: string;
+  sizeBytes: number;
+  userId: number;
+  creatorName: string;
+  createdAt: string;
+}
+
+export const resourceApi = {
+  getMy: () => api.get<ResourceItem[]>('/resources'),
+  getPublic: () => api.get<ResourceItem[]>('/resources/public'),
+  getById: (id: number) => api.get<ResourceItem>(`/resources/${id}`),
+  upload: async (formData: FormData): Promise<ResourceItem> => {
+    const token = sessionStorage.getItem('token');
+    const headers: Record<string, string> = {};
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+    const res = await fetch(`${API_BASE}/resources/upload`, {
+      method: 'POST',
+      headers,
+      body: formData,
+    });
+    const json = await res.json();
+    if (!res.ok || json.code !== 0) throw new Error(json.message || '上传失败');
+    return json.data;
+  },
+  update: (id: number, data: { name?: string; subject?: string; grade?: string; isPublic?: boolean }) =>
+    api.put<ResourceItem>(`/resources/${id}`, data),
+  remove: (id: number) =>
+    api.del<{ id: number }>(`/resources/${id}`),
+  togglePublic: (id: number) =>
+    api.patch<ResourceItem>(`/resources/${id}/public`),
+  getPreviewUrl: (id: number) => `${API_BASE}/resources/${id}/preview`,
+  getDownloadUrl: (id: number) => `${API_BASE}/resources/${id}/download`,
+};
+
+export interface RagDocumentStatus {
+  resourceId: number;
+  status: 'pending' | 'processing' | 'ready' | 'failed';
+  chunkCount: number;
+  errorMsg: string | null;
+}
+
+export interface RagPreview {
+  charCount: number;
+  chunkCount: number;
+  text: string;
+}
+
+export const ragApi = {
+  preview: (resourceId: number) => api.post<RagPreview>('/rag/documents/preview', { resourceId }),
+  vectorize: (resourceId: number, text: string) => api.post<{ status: string }>('/rag/documents', { resourceId, text }),
+  statuses: (resourceIds: number[]) =>
+    api.get<RagDocumentStatus[]>('/rag/documents/status', { resourceIds: resourceIds.join(',') }),
+  clear: (resourceId: number) => api.del<{ success: boolean }>(`/rag/documents/${resourceId}`),
+};
+
 export interface LessonPlanContent {
   fields: FormField[];
   values: Record<string, string | number>;
