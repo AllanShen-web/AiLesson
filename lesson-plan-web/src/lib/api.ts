@@ -575,7 +575,7 @@ export interface RagDocumentStatus {
   resourceId: number;
   status: 'pending' | 'processing' | 'ready' | 'failed';
   chunkCount: number;
-  errorMsg: string | null;
+  errorMessage: string | null;
 }
 
 export interface RagPreview {

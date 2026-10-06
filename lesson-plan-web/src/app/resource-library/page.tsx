@@ -195,7 +195,6 @@ export default function ResourceLibraryPage() {
   useEffect(() => {
     if (!hasProcessing) return;
     const timer = setInterval(async () => {
-      console.log('[resource] 轮询向量化状态');
       const ids = Object.values(ragStatus)
         .filter((s) => s.status === 'processing')
         .map((s) => s.resourceId);
@@ -242,7 +241,7 @@ export default function ResourceLibraryPage() {
       message.success('已发起向量化');
       setRagStatus((prev) => ({
         ...prev,
-        [ragConfirmTarget.id]: { resourceId: ragConfirmTarget.id, status: 'processing', chunkCount: 0, errorMsg: null },
+        [ragConfirmTarget.id]: { resourceId: ragConfirmTarget.id, status: 'processing', chunkCount: 0, errorMessage: null },
       }));
       setRagConfirmOpen(false);
     } catch (err: any) {
@@ -468,7 +467,7 @@ export default function ResourceLibraryPage() {
     ) : status?.status === 'ready' ? (
       <Badge status="success" text={`已向量化 ${status.chunkCount} 块`} />
     ) : status?.status === 'failed' ? (
-      <Tooltip title={status.errorMsg || '向量化失败'}>
+      <Tooltip title={status.errorMessage || '向量化失败'}>
         <Badge status="error" text="向量化失败" />
       </Tooltip>
     ) : null;
