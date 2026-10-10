@@ -88,9 +88,10 @@ def _encode(event: dict[str, Any]) -> str:
 
 
 def _camel_keys(value: Any) -> Any:
-# TODO 只驼峰化最外层，slide 和 data 里的下划线键先不管
     if isinstance(value, dict):
-        return {to_camel(str(key)): item for key, item in value.items()}
+        return {to_camel(str(key)): _camel_keys(item) for key, item in value.items()}
+    if isinstance(value, list):
+        return [_camel_keys(item) for item in value]
     return value
 
 
