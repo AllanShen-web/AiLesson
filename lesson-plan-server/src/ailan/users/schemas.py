@@ -34,8 +34,7 @@ class UserWithRole(UserView):
 
 
 class UserProfile(UserView):
-# TODO 前端要做按钮级判断，权限码得跟账号信息一起返回
-    """`GET /user/me`：账号信息 + 角色 + 权限码。
+    """`GET /users/me`：账号信息 + 角色 + 权限码。
 
     权限码是给前端做页面和按钮级判断用的；真正的放行与否在接口上的权限依赖里，
     前端藏了按钮不等于调不到。
