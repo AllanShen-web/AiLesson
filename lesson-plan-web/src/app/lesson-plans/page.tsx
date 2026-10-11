@@ -142,8 +142,8 @@ export default function LessonPlansPage() {
   const [subject, setSubject] = useState('');
   const [grade, setGrade] = useState('');
   const [keyword, setKeyword] = useState('');
-  const [sortField, setSortField] = useState<string>('createdAt');
-  const [sortOrder, setSortOrder] = useState<'ASC' | 'DESC'>('DESC');
+  const [sortField, setSortField] = useState<'createdAt' | 'updatedAt'>('createdAt');
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
   const [page, setPage] = useState(1);
   const PAGE_SIZE = 20;
 
@@ -198,7 +198,7 @@ export default function LessonPlansPage() {
         ? await lessonPlanApi.getMy(query, { signal })
         : await lessonPlanApi.getPublic(query, { signal });
       if (!signal?.aborted) {
-        setData(result.list);
+        setData(result.items);
         setTotal(result.total);
       }
     } catch {
@@ -209,7 +209,6 @@ export default function LessonPlansPage() {
   }, [activeTab, buildQuery]);
 
   const loadAll = useCallback(async (signal?: AbortSignal) => {
-    console.log('[lesson-plans] 重新拉取列表');
     setAllData([]);
     setAllLoading(true);
     try {
@@ -409,7 +408,7 @@ export default function LessonPlansPage() {
     },
   ];
 
-  const sortIcon = sortOrder === 'DESC' ? <SortDescendingOutlined /> : <SortAscendingOutlined />;
+  const sortIcon = sortOrder === 'desc' ? <SortDescendingOutlined /> : <SortAscendingOutlined />;
 
   return (
     <div>
@@ -456,7 +455,7 @@ export default function LessonPlansPage() {
           allowClear
         />
         <Tooltip title="切换排序字段">
-          <Button icon={sortIcon} onClick={() => setSortOrder(sortOrder === 'DESC' ? 'asc' : 'desc')}>
+          <Button icon={sortIcon} onClick={() => setSortOrder(sortOrder === 'desc' ? 'asc' : 'desc')}>
             {sortField === 'createdAt' ? '创建时间' : '更新时间'}
           </Button>
         </Tooltip>
