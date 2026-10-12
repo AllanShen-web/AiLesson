@@ -4,8 +4,7 @@ import { useEffect, useState, useRef } from 'react';
 import { Tabs, Table, Button, Popconfirm, Input, Switch, Space, Typography, message, Spin, ColorPicker, Card, Row, Col, Tag, QRCode, Modal } from 'antd';
 import { DeleteOutlined, SaveOutlined, PlusOutlined, EyeInvisibleOutlined, EyeOutlined, CopyOutlined } from '@ant-design/icons';
 import { useAuth } from '@/contexts/AuthContext';
-import { type BlessEntry, type BlessSettings, type BlessSettingRecord } from '@/lib/api';
-import { blessApi, blessSettingApi } from '@/lib/blessApi';
+import { blessApi, blessSettingApi, type BlessEntry, type BlessSettings, type BlessSettingRecord } from '@/lib/api';
 import { API_HOST } from '@/lib/env';
 import { useMobile } from '@/hooks/useMobile';
 

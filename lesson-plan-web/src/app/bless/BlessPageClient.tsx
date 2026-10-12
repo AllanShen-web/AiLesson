@@ -4,8 +4,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { Input, Button, Spin } from 'antd';
 import { SendOutlined, DeleteOutlined } from '@ant-design/icons';
-import { type BlessEntry, type BlessSettings, type BlessSettingRecord } from '@/lib/api';
-import { blessApi, blessSettingApi } from '@/lib/blessApi';
+import { blessApi, blessSettingApi, type BlessEntry, type BlessSettings, type BlessSettingRecord } from '@/lib/api';
 import { API_HOST } from '@/lib/env';
 
 const { TextArea } = Input;
@@ -66,7 +65,6 @@ export default function BlessPageClient() {
   const loadEntries = useCallback(async () => {
     try {
       setEntries(await blessApi.getWall(username));
-      console.log('[bless] 墙面留言', username);
     } catch {
       // silent
     } finally {
