@@ -38,7 +38,12 @@ def default_settings(nickname: str) -> dict[str, Any]:
         "enableFloating": True,
         "enableGradient": True,
         "bgImageUrl": None,
-        # 墙面页还要读轮播图列表和气泡配色，先把这两组留到后面补
+        # 轮播与回复气泡是墙面页会读的键：一次给全，配置从第一天起就是完整的一份
+        "bgImageUrls": [],
+        "bgInterval": 5,
+        "replyMessage": "",
+        "replyBgColor": "#fff5eb",
+        "replyTextColor": "#8b3a1a",
     }
 
 
