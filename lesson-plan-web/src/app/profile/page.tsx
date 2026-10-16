@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { Form, Input, Button, Typography, Card, message, Avatar, Upload, Space, Popconfirm, Empty, Modal } from 'antd';
 import { UserOutlined, MailOutlined, CameraOutlined, SmileOutlined, DeleteOutlined, HistoryOutlined, LockOutlined } from '@ant-design/icons';
 import { useAuth } from '@/contexts/AuthContext';
-import { api, userManagementApi } from '@/lib/api';
+import { userApi, userManagementApi } from '@/lib/api';
 import { API_HOST } from '@/lib/env';
 import { useMobile } from '@/hooks/useMobile';
 
@@ -15,7 +15,6 @@ export default function ProfilePage() {
   const isMobile = useMobile();
   useEffect(() => { document.title = '个人中心'; }, []);
   const [loading, setLoading] = useState(false);
-  console.warn('[profile] 用户信息', user?.username);
   const [avatarUrl, setAvatarUrl] = useState<string>('');
   const [form] = Form.useForm();
   const [pwForm] = Form.useForm();
@@ -80,7 +79,7 @@ export default function ProfilePage() {
     const values = await form.validateFields();
     setLoading(true);
     try {
-      await api.put('/user/profile', values);
+      await userApi.updateProfile(values);
       await refreshUser();
       message.success('保存成功');
     } catch (err: unknown) {
